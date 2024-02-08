@@ -1,63 +1,49 @@
 from keras.datasets import mnist
 import tensorflow as tf
-import tkinter as tk
-from tkinter import filedialog
 import numpy as np
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib import pyplot
 import json
 
 fig, ax = pyplot.subplots(1, 2)
-
-def MapRange(num, inMin, inMax, outMin, outMax):
-  return outMin + (float(num - inMin) / float(inMax - inMin) * (outMax
-                  - outMin))
+LATENT_SPACE_IMAGE_FILE = 'latent_space_image.json'
+TRAINED_MODEL_FILE = 'trained_model_cnn.h5'
+EPOCHS = 10
+BATCH_SIZE = 64
 
 def LoadEncoder():
-	full_model = tf.keras.models.load_model('trained_model_cnn_1.h5')
+	""" Loads encoder from the file """
+
+	full_model = tf.keras.models.load_model(TRAINED_MODEL_FILE)
 
 	input_layer = full_model.layers[0]
 	hidden_layer = full_model.layers[1:9]
 
-	model = tf.keras.Sequential([input_layer] + hidden_layer) # ADD INPUT AND HIDDEN LAYERS
+	model = tf.keras.Sequential([input_layer] + hidden_layer) # add input and hidden layers
 	model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
 
 	print("Encoder summary: ", model.summary())
-	# input_layer = full_model.layers[0]
-	# hidden_layer = full_model.layers[1]
-
-	# model = tf.keras.Sequential([input_layer] + [hidden_layer]) # ADD INPUT AND HIDDEN LAYERS
-	# model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
 
 	return model
 
 def LoadDecoder():
-	full_model = tf.keras.models.load_model('trained_model_cnn_1.h5')
+	""" Loads decoder from the file """
+
+	full_model = tf.keras.models.load_model(TRAINED_MODEL_FILE)
 
 	input_layer = full_model.layers[9]
 	hidden_layer = full_model.layers[9:17]
 
-	model = tf.keras.Sequential([input_layer] + hidden_layer) # ADD INPUT AND HIDDEN LAYERS
+	model = tf.keras.Sequential([input_layer] + hidden_layer) # add input and hidden layers
 	model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
 	model.build((1, 2))
 
 	print("Decoder summary: ", model.summary())
-	# input_layer = full_model.layers[2]
-	# hidden_layer = full_model.layers[3]
 
-	# model = tf.keras.Sequential([input_layer] + [hidden_layer]) # ADD INPUT AND HIDDEN LAYERS
-	# model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
-
-	return model
-
-encoder = LoadEncoder()
-decoder = LoadDecoder()
-
-def LoadFullModel():
-	model = tf.keras.models.load_model('trained_model.h5')
 	return model
 
 def MakeConvolutionalModel():
+	""" Builds the convolutional neural network """
+
 	model = tf.keras.Sequential([
 		tf.keras.layers.Input(shape=(28, 28, 1)),
 		tf.keras.layers.Conv2D(32, 3, strides=(1, 1), padding="valid", activation="relu", input_shape=(28, 28, 1)),		
@@ -78,31 +64,6 @@ def MakeConvolutionalModel():
 		tf.keras.layers.UpSampling2D((2, 2)),
 		tf.keras.layers.Conv2DTranspose(32, 3, padding="valid", activation="relu"),
 		tf.keras.layers.Conv2DTranspose(1, 3, padding="valid", activation="relu"),
-
-		#tf.keras.layers.Dense(2, activation="tanh"),
-		#tf.keras.layers.Dense(49, activation="tanh"),
-		#tf.keras.layers.Dense(196, activation="tanh"),
-		#tf.keras.layers.Dense(784, activation="sigmoid"),
-
-
-		# OLD 1
-		# tf.keras.layers.Input(shape=(28, 28, 1)),
-		# tf.keras.layers.Conv2D(32, 3, strides=(1, 1), padding="same", activation="relu", input_shape=(28, 28, 1)),		# from 28x28 to 28x28
-		# tf.keras.layers.MaxPool2D((2, 2)),																				# from 28x28 to 14x14
-		# tf.keras.layers.Conv2D(32, 3, activation="relu", padding="same"),												# form 14x14 to 14x14
-		# tf.keras.layers.MaxPool2D((2, 2)),																				# from 7x7 to 3x3 ???
-		# tf.keras.layers.Flatten(),
-		# tf.keras.layers.Dropout(0.5),
-
-		# tf.keras.layers.Dense(512, activation="relu"), # code layer
-
-		# tf.keras.layers.Dense(10, activation="relu"),
-		# tf.keras.layers.Dropout(0.5),
-		# tf.keras.layers.Dense(256, activation="relu"),
-		# tf.keras.layers.Dropout(0.5),
-		# tf.keras.layers.Dense(512, activation="relu"),
-		# tf.keras.layers.Dropout(0.5),
-		# tf.keras.layers.Dense(784, activation="sigmoid"),
 	])
 
 	model.compile(optimizer="adam", loss="mse", metrics=["accuracy"])
@@ -111,51 +72,17 @@ def MakeConvolutionalModel():
 
 	return model
 
-def MakeModel():
-	model = tf.keras.Sequential([
-		tf.keras.layers.Input(shape=(784,)),
-		tf.keras.layers.Dense(512, activation='relu'),
-		tf.keras.layers.Dense(256, activation='relu'),
-		tf.keras.layers.Dropout(0.5),
-		tf.keras.layers.Dense(128, activation='relu'),
-		tf.keras.layers.Dense(64, activation='relu'),
-		tf.keras.layers.Dropout(0.5),
-		tf.keras.layers.Dense(32, activation='relu'),
-		tf.keras.layers.Dense(16, activation='relu'),
-		tf.keras.layers.Dense(8, activation='relu'),
-		tf.keras.layers.Dropout(0.5),
-		tf.keras.layers.Dense(4, activation='relu'),
-		tf.keras.layers.Dense(2, activation='relu'),
-		tf.keras.layers.Dense(4, activation='relu'),
-		tf.keras.layers.Dense(8, activation='relu'),
-		tf.keras.layers.Dropout(0.5),
-		tf.keras.layers.Dense(16, activation='relu'),
-		tf.keras.layers.Dense(32, activation='relu'),
-		tf.keras.layers.Dense(64, activation='relu'),
-		tf.keras.layers.Dropout(0.5),
-		tf.keras.layers.Dense(128, activation='relu'),
-		tf.keras.layers.Dense(256, activation='relu'),
-		tf.keras.layers.Dropout(0.5),
-		tf.keras.layers.Dense(512, activation='relu'),
-		tf.keras.layers.Dense(784, activation='sigmoid')
-	])
+def TrainModel(model, save=False):
+	""" Trains the model """
 
-	model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+	model.fit(train_x, train_x, epochs=EPOCHS, batch_size=BATCH_SIZE, validation_data=(test_x, test_x))
+	if save: model.save(TRAINED_MODEL_FILE)
 
 	return model
 
-def TrainModel():
-	model = MakeConvolutionalModel()
-
-	model.fit(train_x, train_x, epochs=20, batch_size=32)
-
-	predictions = model.predict(train_x)
-
-	#model.save('trained_model_cnn_2.h5')
-
-	return predictions
-
 def ShowImgs(imgs):
+	""" Shows 9 images from imgs variable (debug only) """
+
 	for i in range(9):  
 		img = np.zeros((28, 28))
 		for j in range(28):
@@ -166,7 +93,9 @@ def ShowImgs(imgs):
 		pyplot.imshow(img, cmap=pyplot.get_cmap('gray'))
 	pyplot.show()
 
-def update_image(event):
+def UpdateImage(event):
+	""" Generates and draws new image every time we move mouse cursor """
+
 	if event.xdata is None or event.ydata is None:
 		return
 	
@@ -174,29 +103,30 @@ def update_image(event):
 		return
 
 	x, y = float(event.xdata), float(event.ydata)
-	#print(x, " : ", y)
-	#if 0 <= x < 28 and 0 <= y < 28:
-	ax[1].clear()  # Clear the previous image
+	ax[1].clear()  # clear previous image
 	decoder_predictions = decoder.predict([[x, y]])
 
-	ax[1].imshow(np.reshape(decoder_predictions, (28, 28)), cmap='gray')  # Display the original image
-	canvas.draw()  # Redraw the canvas
+	ax[1].imshow(np.reshape(decoder_predictions, (28, 28)), cmap='gray')  # display the original image
+	canvas.draw()  # redraw the canvas
 
 def MapInputToLatentSpace():
+	""" Maps the input space to the latent space of only two variables """
+
 	encoder_predictions = encoder.predict(test_x)
 	data = [[], [], [], [], [], [], [], [], [], []]
 	
 	for i in range(len(test_x)):
-		data[test_y[i]].append([str(encoder_predictions[i, 0]), str(encoder_predictions[i, 1])]) # WE SAVE PREDICTED DATA FROM ENCODER TO THE CLASS OF THE CURRENT SAMPLE
+		data[test_y[i]].append([str(encoder_predictions[i, 0]), str(encoder_predictions[i, 1])]) # we save predicted data from encoder to the class of the current sample
 
 	json_parsed = json.dumps(data)
-	print("JSON: ", json_parsed)
 
-	with open("latent_space_image_2.json", "w") as outfile:
+	with open(LATENT_SPACE_IMAGE_FILE, "w") as outfile:
 		outfile.write(json_parsed)
 
 def VisualiseLatentSpace():
-	f = open('latent_space_image.json')
+	""" Loads and draws image of latent space """
+
+	f = open(LATENT_SPACE_IMAGE_FILE)
 
 	data = json.load(f)
 	colors = ["red", "green", "blue", "yellow", "black", "orange", "pink", "brown", "cyan", "gray"]
@@ -209,56 +139,38 @@ def VisualiseLatentSpace():
 			plot_y.append(float(data[i][j][1]))
 		ax[0].scatter(plot_x, plot_y, c=colors[i])
 
-
 if __name__ == '__main__':
-	print("Start")
+	""" Main function """
+
+	print("Started!")
 
 	(train_x, train_y), (test_x, test_y) = mnist.load_data()
 	train_x = train_x / 255.0
 	test_x = test_x / 255.0
 
-	#for i in range(9):  
-	#	pyplot.subplot(330 + 1 + i)
-	#	pyplot.imshow(train_x[i], cmap=pyplot.get_cmap('gray'))
-	#pyplot.show()
-
 	train_x_reshaped = train_x.reshape((len(train_x), 784))
 	test_x_reshaped = test_x.reshape((len(test_x), 784))
 
-	#predictions = TrainModel()
-	#ShowImgs(predictions)
+	model = MakeConvolutionalModel() # COMMENT THIS IF MODEL IS ALREADY TRAINED AND YOU ONLY WANT VISUALIZATION
+	model = TrainModel(model, save=True) # COMMENT THIS IF MODEL IS ALREADY TRAINED AND YOU ONLY WANT VISUALIZATION
 
-	#encoder_predictions = encoder.predict(train_x)
-	#print("Encoder predictions: ", encoder_predictions)
-	
-	#MapInputToLatentSpace()
+	encoder = LoadEncoder() # COMMENT THIS IF MODEL IS ALREADY TRAINED AND YOU ONLY WANT VISUALIZATION
+	decoder = LoadDecoder()
 
-	ax[1].imshow(np.random.rand(28, 28), cmap='gray')
+	MapInputToLatentSpace() # COMMENT THIS IF MODEL IS ALREADY TRAINED AND YOU ONLY WANT VISUALIZATION
+
+	""" This part is only visualization, with already trained model """
+
+	ax[1].imshow(np.random.rand(28, 28), cmap='gray') # show random noise for start
 
 	canvas = fig.canvas
-	canvas.mpl_connect('motion_notify_event', update_image)
+	canvas.mpl_connect('motion_notify_event', UpdateImage) # subscribe to the mouse movement event
 
-	VisualiseLatentSpace()
+	VisualiseLatentSpace() # draw image of latent space representation
 
 	pyplot.show()
 
-	# decoder_predictions = decoder.predict(encoder_predictions)
-	# print("Decoder predictions shape: ", decoder_predictions.shape)
-	# print("Decoder predictions: ", decoder_predictions)
-	# for i in range(9):  
-	# 	pyplot.subplot(330 + 1 + i)
-	# 	pyplot.imshow(np.reshape(decoder_predictions[i], (28, 28)), cmap=pyplot.get_cmap('gray'))
-	# pyplot.show()
 
-	# ************************** VISUALISE ****************************
-
-	# image = np.random.rand(28, 28)
-	# ax.imshow(image, cmap='gray')
-
-	# canvas = fig.canvas
-	# canvas.mpl_connect('motion_notify_event', update_image)
-
-	# pyplot.show()
 
 
 
